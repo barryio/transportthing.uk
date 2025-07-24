@@ -38,4 +38,6 @@ urlpatterns = [
         name="register_confirm",
     ),
     path("users/<int:pk>", views.user_detail, name="user_detail"),
+    path("operator/<str:noc>/", views.operator_detail, name="operator_detail"),
 ]
+

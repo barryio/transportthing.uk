@@ -54,12 +54,12 @@
         <p>
             {% if user.is_superuser %}
                 <a href="/admin/busstops/operator/{{ ou.operator.noc }}/change/">{{ ou.operator }}</a>
-            {% elif ou.operator in user.operatoruser_set.values_list('operator', flat=True) %}
+            {% elif ou.operator.noc in user_operator_nocs %}
                 <a href="{% url 'operator_detail' ou.operator.noc %}">{{ ou.operator }}</a>
             {% else %}
                 {{ ou.operator }}
             {% endif %}
         </p>
     {% endfor %}
-
+    
 {% endblock content %}

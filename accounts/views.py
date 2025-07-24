@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, render
 from django.utils.safestring import mark_safe
 from sql_util.utils import SubqueryCount
 
+from .models import Operator 
+
 from . import forms
 
 UserModel = get_user_model()
@@ -73,8 +75,11 @@ def user_detail(request, pk):
     )
 
     user = get_object_or_404(users, pk=pk)
-
-    context = {"object": user}
+    user_operator_nocs = request.user.operatoruser_set.values_list('operator__noc', flat=True)
+    context = {
+        "object": user,
+        "user_operator_nocs": list(user_operator_nocs),
+    }
 
     if request.user == user:
         form = forms.UserForm(request.POST or None, user=user)
@@ -112,3 +117,9 @@ def user_detail(request, pk):
         context["form"] = form
 
     return render(request, "user_detail.html", context)
+
+
+@login_required
+def operator_detail(request, noc):
+    operator = get_object_or_404(Operator, noc=noc)
+    return render(request, "operator_detail.html", {"operator": operator})
