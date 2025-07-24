@@ -1658,4 +1658,4 @@ def journey(request):
 
 def change_notes_view(request):
     notes = ChangeNote.objects.all()
-    return render(request, 'change_notes.html', {'notes': notes})
+    return render(request, 'change.html', {'notes': notes})
