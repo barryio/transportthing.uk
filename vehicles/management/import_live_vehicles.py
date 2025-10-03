@@ -95,8 +95,11 @@ class ImportLiveVehiclesCommand(BaseCommand):
     )
     def get_items(self):
         response = self.session.get(self.url, timeout=20)
-        assert response.ok
-        return response.json()
+        if not response.ok:
+            print(f"HTTP error {response.status_code}: {response.text[:500]}")
+            response.raise_for_status()  # optional, will raise proper HTTPError
+        data = response.json()
+        return data.get("features", [])
 
     @staticmethod
     def get_service(queryset, latlong):
