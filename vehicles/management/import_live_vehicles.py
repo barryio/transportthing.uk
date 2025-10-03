@@ -28,15 +28,22 @@ twelve_hours = timedelta(hours=12)
 
 
 def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.session = requests.Session()
-    self.session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/117.0 Safari/537.36"
-    })
-    self.to_save = []
-    self.vehicles_to_update = []
+        super().__init__(*args, **kwargs)
+        self.session = requests.Session()
+
+        # Add browser-like headers here 👇
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/117.0 Safari/537.36",
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
+            "Referer": "https://mytrip.arcticapi.com/",
+            "X-Requested-With": "XMLHttpRequest",
+        })
+
+        self.to_save = []
+        self.vehicles_to_update = []
 
 
 def same_journey(latest_journey, journey, latest_datetime, when):
