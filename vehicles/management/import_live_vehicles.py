@@ -27,6 +27,18 @@ fifteen_minutes = timedelta(minutes=15)
 twelve_hours = timedelta(hours=12)
 
 
+def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.session = requests.Session()
+    self.session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/117.0 Safari/537.36"
+    })
+    self.to_save = []
+    self.vehicles_to_update = []
+
+
 def same_journey(latest_journey, journey, latest_datetime, when):
     if not latest_journey:
         return False
