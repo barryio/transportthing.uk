@@ -313,6 +313,7 @@ ALLOW_VEHICLE_NOTES_OPERATORS = (
     "SCLK",  # Scottish Citylink
     "ie-526",  # Irish Citylink
     "ie-1178",  # Dublin Express
+    "ie-7778108", # Dublin Express, again?
     "ie-7778000", # Citylink... 
     "PRES", # Preservation
     "MOTGTM", # MoTGM
@@ -320,7 +321,12 @@ ALLOW_VEHICLE_NOTES_OPERATORS = (
 )
 
 NEW_VEHICLE_WEBHOOK_URL = os.environ.get("NEW_VEHICLE_WEBHOOK_URL")
-NEW_TRAIN_WEBHOOK_URL = os.environ.get("NEW_TRAIN_WEBHOOK_URL");
+NEW_TRAIN_WEBHOOK_URL = os.environ.get("NEW_TRAIN_WEBHOOK_URL")
+NEW_LICENCE_WEBHOOK_URL = os.environ.get("NEW_LICENCE_WEBHOOK_URL")
+NEW_OPERATOR_WEBHOOK_URL = os.environ.get("NEW_OPERATOR_WEBHOOK_URL")
+NEW_DISRUPTION_WEBHOOK_URL = os.environ.get("NEW_DISRUPTION_WEBHOOK_URL")
+NEW_STOP_WEBHOOK_URL = os.environ.get("NEW_STOP_WEBHOOK_URL")
+NEW_SERVICE_WEBHOOK_URL = os.environ.get("NEW_SERVICE_WEBHOOK_URL")
 DATA_DIR = os.environ.get("DATA_DIR")
 if DATA_DIR:
     DATA_DIR = Path(DATA_DIR)

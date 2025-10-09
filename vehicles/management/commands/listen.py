@@ -127,7 +127,7 @@ class Command(BaseCommand):
                 try:
                     if noc_code in trains: # checks if its a train tracking or not
                         response = session.post(
-                            settings.NEW_TRAIN_WEBHOOK_URL,
+                            "https://discord.com/api/webhooks/1397044102666649842/mtBiSIA-2taZ2T5aWjn3D1_I1JZlvGmBbMyZFc1FOrraOiEur_-M8SnnbDGNNvJNDRdY",
                             json={
                                 "username": "Train Tracker",
                                 "content": content,

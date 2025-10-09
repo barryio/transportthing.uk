@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    entrypoint: sh -c "uv sync --group dev --group test; DEBUG=1 exec ./manage.py runserver 100.83.239.39:9000"
+    entrypoint: sh -c "uv sync --group dev --group test; DEBUG=1 exec ./manage.py runserver 0.0.0.0:9000"
     container_name: django_web
     environment:
       - SECRET_KEY
@@ -19,6 +19,11 @@ services:
       - TFL_APP_KEY
       - NEW_VEHICLE_WEBHOOK_URL
       - NEW_TRAIN_WEBHOOK_URL
+      - NEW_LICENCE_WEBHOOK_URL
+      - NEW_OPERATOR_WEBHOOK_URL
+      - NEW_DISRUPTION_WEBHOOK_URL
+      - NEW_STOP_WEBHOOK_URL
+      - NEW_SERVICE_WEBHOOK_URL
       - TURNSTILE_SITEKEY
       - TURNSTILE_SECRET
       - DEBUG

@@ -25,7 +25,7 @@ class Command(ImportLiveVehiclesCommand):
             self.operators = {}
 
     def get_items(self):
-        return super().get_items()["features"]
+        return super().get_items()
 
     def get_operator(self, item):
         if len(self.operators) == 1:
