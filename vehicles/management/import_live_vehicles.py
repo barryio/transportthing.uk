@@ -117,8 +117,7 @@ class ImportLiveVehiclesCommand(BaseCommand):
         if not response.ok:
             print(f"HTTP error {response.status_code}: {response.text[:500]}")
             response.raise_for_status()  # optional, will raise proper HTTPError
-        data = response.json()
-        return data.get("features", [])
+        return response.json()
 
     @staticmethod
     def get_service(queryset, latlong):

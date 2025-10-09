@@ -14,6 +14,7 @@ from .import_gtfsr_ie import Command as BaseCommand
 
 class Command(BaseCommand):
     source_name = "Ember"
+    previous_locations = {}
 
     @cache
     def get_note(self, note_code, note_text):
