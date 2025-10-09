@@ -77,9 +77,3 @@ jobs:
           cd /svcs/transportthing.uk
           git pull
         "
-    - name: Pull the latest docker image to baldrick (TT Host)
-      run: |
-        ssh -o "StrictHostKeyChecking no" root@baldrick "
-          cd /svcs/tt-web
-          docker compose pull
-        "
