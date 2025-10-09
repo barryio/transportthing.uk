@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    entrypoint: sh -c "uv sync --group dev --group test; DEBUG=1 exec ./manage.py runserver 0.0.0.0:9000"
+    entrypoint: sh -c "uv sync --group dev --group test; DEBUG=1 exec ./manage.py runserver 100.83.239.39:9000"
     container_name: django_web
     environment:
       - SECRET_KEY
