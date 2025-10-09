@@ -2,7 +2,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from itertools import pairwise
 
 import pandas as pd
 import geopandas as gpd
@@ -17,13 +16,10 @@ from django.utils.dateparse import parse_duration
 from busstops.models import DataSource, Operator, Service, StopPoint
 
 from ...download_utils import download_if_modified
-from ...models import Route, StopTime, Trip, RouteLink
-from ...gtfs_utils import get_calendars, MODES
+from ...models import Route, StopTime, Trip
+from .import_gtfs_ember import get_calendars
 
 logger = logging.getLogger(__name__)
-
-
-MODES = {**MODES, 3: "coach"}
 
 
 def routes_as_gdf(feed):
@@ -86,7 +82,7 @@ class Command(BaseCommand):
         operator = Operator.objects.get(name="FlixBus")
         source = DataSource.objects.get(name="FlixBus US")
 
-        path = settings.DATA_DIR / Path("flixbus_eu.zip")
+        path = settings.DATA_DIR / Path("flixbus_us.zip")
 
         source.url = "https://gtfs.gis.flix.tech/gtfs_generic_us.zip"
 
@@ -94,8 +90,6 @@ class Command(BaseCommand):
 
         if not modified:
             return
-
-        logger.info(f"{source} {last_modified}")
 
         feed = gtfs_kit.read_feed(path, dist_units="km")
 
@@ -132,10 +126,12 @@ class Command(BaseCommand):
 
         geometries = {}
         for row in routes_as_gdf(feed).itertuples():
+            # print(row)
             if row.geometry:
+                # print(row.geometry, row.geometry.wkt)
                 geometries[row.route_id] = row.geometry.wkt
             else:
-                logger.info(row)
+                print(row)
 
         for row in feed.routes.itertuples():
             line_name = row.route_id
@@ -160,7 +156,6 @@ class Command(BaseCommand):
             service.source = source
             service.geometry = geometries.get(row.route_id)
             service.region_id = "GB"
-            service.mode = MODES[row.route_type]
 
             service.save()
             service.operator.add(operator)
@@ -182,7 +177,6 @@ class Command(BaseCommand):
                 vehicle_journey_code=row.trip_id,
                 headsign=row.trip_headsign if pd.notna(row.trip_headsign) else "",
                 operator=operator,
-                journey_pattern=row.shape_id,
             )
             if trip.vehicle_journey_code in existing_trips:
                 # reuse existing trip id
@@ -207,8 +201,6 @@ class Command(BaseCommand):
                 departure=departure_time,
                 sequence=row.stop_sequence,
                 trip=trip,
-                pick_up=(row.pickup_type != 1),
-                set_down=(row.drop_off_type != 1),
             )
             if pd.notna(row.timepoint) and row.timepoint == 1:
                 stop_time.timing_status = "PTP"
@@ -221,7 +213,6 @@ class Command(BaseCommand):
                 stop = stops_data[row.stop_id]
                 stop_time.stop_id = row.stop_id
 
-                # create new StopPoint
                 if row.stop_id not in missing_stops:
                     missing_stops[row.stop_id] = get_stoppoint(stop, source)
 
@@ -229,10 +220,10 @@ class Command(BaseCommand):
                         f"{stop.stop_name} {stop.stop_code} {stop.stop_timezone} {stop.platform_code}"
                     )
                     logger.info(
-                        f"https://bustimes.org/map#16/{stop.stop_lat}/{stop.stop_lon}"
+                        f"https://timesbus.org/map#16/{stop.stop_lat}/{stop.stop_lon}"
                     )
                     logger.info(
-                        f"https://bustimes.org/admin/busstops/stopcode/add/?code={row.stop_id}\n"
+                        f"https://timesbus.org/admin/busstops/stopcode/add/?code={row.stop_id}\n"
                     )
 
             trip.destination_id = stop_time.stop_id
@@ -274,7 +265,7 @@ class Command(BaseCommand):
                 service.do_stop_usages()
                 service.update_search_vector()
 
-            logger.info(
+            print(
                 source.route_set.exclude(id__in=[route.id for route in routes]).delete()
             )
 
@@ -284,12 +275,12 @@ class Command(BaseCommand):
                 route.start_date = route.start
                 route.save(update_fields=["start_date"])
 
-            logger.info(
+            print(
                 operator.trip_set.exclude(
                     id__in=[trip.id for trip in trips.values()]
                 ).delete()
             )
-            logger.info(
+            print(
                 operator.service_set.filter(current=True, route__isnull=True).update(
                     current=False
                 )
@@ -297,72 +288,3 @@ class Command(BaseCommand):
             if last_modified:
                 source.datetime = last_modified
                 source.save(update_fields=["datetime"])
-
-        do_route_links(feed, source, existing_routes, stops_data, stop_codes)
-
-
-def do_route_links(
-    feed: gtfs_kit.feed.Feed,
-    source: DataSource,
-    routes: dict,
-    stops: dict,
-    stop_codes: dict,
-):
-    try:
-        trips = feed.get_trips(as_gdf=True).drop_duplicates("shape_id")
-    except ValueError:
-        return
-
-    existing_route_links = {
-        (rl.service_id, rl.from_stop_id, rl.to_stop_id): rl
-        for rl in RouteLink.objects.filter(service__source=source)
-    }
-    route_links = {}
-
-    for trip in trips.itertuples():
-        if trip.geometry is None:
-            continue
-
-        service = routes[trip.route_id].service_id
-
-        start_dist = None
-
-        for a, b in pairwise(
-            feed.stop_times[feed.stop_times.trip_id == trip.trip_id].itertuples()
-        ):
-            from_stop = stop_codes.get(a.stop_id, a.stop_id)
-            to_stop = stop_codes.get(b.stop_id, b.stop_id)
-            key = (service, from_stop, to_stop)
-
-            if key in route_links:
-                start_dist = None
-                continue
-
-            # find the substring of rl.geometry between the stops a and b
-            if not start_dist:
-                stop_a = stops[a.stop_id]
-                point_a = so.Point(stop_a.stop_lon, stop_a.stop_lat)
-                start_dist = trip.geometry.project(point_a)
-            stop_b = stops[b.stop_id]
-            point_b = so.Point(stop_b.stop_lon, stop_b.stop_lat)
-            end_dist = trip.geometry.project(point_b)
-
-            geom = so.substring(trip.geometry, start_dist, end_dist)
-            if type(geom) is so.LineString:
-                if key in existing_route_links:
-                    rl = existing_route_links[key]
-                else:
-                    rl = RouteLink(
-                        service_id=key[0],
-                        from_stop_id=key[1],
-                        to_stop_id=key[2],
-                    )
-                rl.geometry = geom.wkt
-                route_links[key] = rl
-
-            start_dist = end_dist
-
-    RouteLink.objects.bulk_update(
-        [rl for rl in route_links.values() if rl.id], fields=["geometry"]
-    )
-    RouteLink.objects.bulk_create([rl for rl in route_links.values() if not rl.id])
