@@ -74,6 +74,5 @@ jobs:
     - name: Pull the latest git code
       run: |
         ssh -o "StrictHostKeyChecking no" root@baldrick "
-          cd /svcs/transportthing.uk
-          git pull ghcr.io/transportthing/transportthing.uk/web:latest
+          cd /svcs/transportthing.uk;git pull origin main
         "
