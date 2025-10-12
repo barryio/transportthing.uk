@@ -1,0 +1,152 @@
+from django.db import connection
+import time
+import requests
+from django.core.management.base import BaseCommand
+from django.conf import settings
+import logging  # Import logging
+import psycopg2
+
+logger = logging.getLogger(__name__)
+
+class Command(BaseCommand):
+    help = "Listens for new or updated stop points and sends Discord webhooks."
+
+    def handle(self, *args, **options):
+        assert settings.NEW_STOP_WEBHOOK_URL, "NEW_STOP_WEBHOOK_URL is not set"
+        session = requests.Session()
+
+        with connection.cursor() as cursor:
+            # Ensure the trigger and function are set up
+            cursor.execute("""
+                CREATE OR REPLACE FUNCTION notify_new_stop()
+                RETURNS trigger AS $$
+                BEGIN
+                    PERFORM pg_notify('new_stop', NEW.atco_code);
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+            """)
+            cursor.execute("""
+                CREATE OR REPLACE TRIGGER notify_new_stop
+                AFTER INSERT OR UPDATE ON busstops_stoppoint
+                FOR EACH ROW
+                EXECUTE PROCEDURE notify_new_stop();
+            """)
+            logger.info("PostgreSQL notify function and trigger ensured for stops.")
+
+            cursor.execute("LISTEN new_stop")
+            logger.info("Listening for 'new_stop' notifications...")
+
+            gen = cursor.connection.notifies()
+
+            for notify in gen:
+                atco_code = notify.payload
+                logger.info(f"Received notification for stop: {atco_code}")
+                logger.info(f"Payload repr: {repr(atco_code)}")
+                time.sleep(2)  # Wait for potential commit
+                logger.info("About to fetch stop")
+
+                try:
+                    conn = psycopg2.connect(
+                        database=settings.DATABASES['default']['NAME'],
+                        user=settings.DATABASES['default']['USER'],
+                        password=settings.DATABASES['default']['PASSWORD'],
+                        host=settings.DATABASES['default']['HOST'] or 'localhost',
+                        port=settings.DATABASES['default']['PORT'] or 5432,
+                    )
+                    with conn.cursor() as query_cursor:
+                        query_cursor.execute("""
+                            SELECT atco_code, common_name, indicator, town, bearing
+                            FROM busstops_stoppoint
+                            WHERE atco_code = %s
+                        """, [atco_code])
+                        row = query_cursor.fetchone()
+                    conn.close()
+                except Exception as e:
+                    logger.error(f"Error fetching stop {atco_code}: {e}")
+                    continue
+
+                if not row:
+                    logger.error(f"Stop {atco_code} not found in database")
+                    continue
+
+                logger.info(f"Row: {row}")
+                atco_code, common_name, indicator, town, bearing = row
+                logger.info(f"Fetched stop: {common_name}")
+
+                stop_url = f"https://transportthing.uk/stops/{atco_code}"
+
+                # Format bearing nicely
+                bearing_display = bearing
+                if bearing:
+                    bearing_choices = {
+                        "N": "north ↑",
+                        "NE": "north-east ↗",
+                        "E": "east →",
+                        "SE": "south-east ↘",
+                        "S": "south ↓",
+                        "SW": "south-west ↙",
+                        "W": "west ←",
+                        "NW": "north-west ↖",
+                    }
+                    bearing_display = bearing_choices.get(bearing, bearing)
+
+                fields = [
+                    {
+                        "name": "ATCO Code",
+                        "value": atco_code,
+                        "inline": True
+                    },
+                    {
+                        "name": "Name",
+                        "value": common_name,
+                        "inline": True
+                    },
+                    {
+                        "name": "Indicator",
+                        "value": indicator or "N/A",
+                        "inline": True
+                    },
+                    {
+                        "name": "Town",
+                        "value": town or "N/A",
+                        "inline": True
+                    },
+                    {
+                        "name": "Bearing",
+                        "value": bearing_display or "N/A",
+                        "inline": True
+                    }
+                ]
+
+                embed = {
+                    "title": "New or Updated Stop",
+                    "description": f"[View Stop]({stop_url})",
+                    "color": 0xFFA500,  # Orange for stops
+                    "fields": fields,
+                    "thumbnail": {
+                        "url": "https://assets.transportthing.uk/favicon.svg"
+                    },
+                    "footer": {
+                        "text": "TT Stop Tracker"
+                    }
+                }
+
+                logger.info(f"Sending webhook for stop {atco_code}")
+                try:
+                    response = session.post(
+                        settings.NEW_STOP_WEBHOOK_URL,
+                        json={
+                            "username": "Stop Tracker",
+                            "embeds": [embed],
+                        },
+                        timeout=5,
+                    )
+                    response.raise_for_status()
+                    logger.info(f"Successfully sent webhook for stop {atco_code}. Response: {response.text}")
+                except requests.exceptions.Timeout:
+                    logger.error(f"Webhook request timed out for stop {atco_code}")
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"Error sending webhook for stop {atco_code}: {e}")
+
+                time.sleep(2)

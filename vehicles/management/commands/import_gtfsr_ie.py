@@ -15,15 +15,15 @@ from ...models import Vehicle, VehicleJourney, VehicleLocation
 from ..import_live_vehicles import ImportLiveVehiclesCommand
 
 occupancies = {
-    0: "Empty",
-    1: "Many seats available",
-    2: "Few seats available",
-    3: "Standing room only",
-    4: "Crushed standing room only",
-    5: "Full",
-    6: "Not accepting passengers",
-    7: "No data available",
-    8: "Not boardable",
+    0: "seatsAvailable",
+    1: "seatsAvailable",
+    2: "seatsAvailable",
+    3: "standingAvailable",
+    4: "full",
+    5: "full",
+    6: None,
+    7: None,
+    8: None,
 }
 
 

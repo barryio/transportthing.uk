@@ -25,27 +25,20 @@ class Command(ImportLiveVehiclesCommand):
             self.operators = {}
 
     def get_items(self):
-        return super().get_items()["features"]
+        return super().get_items()
 
     def get_operator(self, item):
         if len(self.operators) == 1:
             return list(self.operators.values())[0]
-        operator = item["_embedded"]["transmodel:line"]["href"].split("/")[3]
+        operator = item["embedded"]["transmodel:line"]["href"].split("/")[3]
 
         # Ensure McG is mapped to MCGL
-        if operator == "McG":
-            operator = "MCGL"
-        if operator in ("NT0", "NTO"):
-            operator == "NWPT"
-        if operator == "CB":
-            operator = "CBUS"
-        if operator == "SHI":
-            operator = "SHIL"
-        if operator in ("JMT", "S25"):
-            operator = "NJMT"
-        if operator == "S27":
-            operator == "MCLS"
-
+        if operator == "SYF":
+            operator = "SYFT"
+        if operator == "SSS":
+            operator = "SSSN"
+        if operator == "NT":
+            operator = "NT"
         try:
             operator = self.operators[operator]
         except KeyError:
@@ -63,11 +56,6 @@ class Command(ImportLiveVehiclesCommand):
 
         operator = self.get_operator(item)
         if not operator:
-            return None, None
-
-        if operator == "MCGL" and (len(code) >= 7 or len(code) >= 5 and code.isdigit()):
-            # Borders Buses or First vehicles
-            print(code)
             return None, None
 
         defaults = {"source": self.source, "operator_id": operator, "code": code}
