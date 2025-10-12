@@ -19,10 +19,19 @@ from datetime import datetime
 def send_discord_message(message: str):
     """Send a message to Discord webhook."""
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+    tnds_email = os.getenv('TNDS_EMAIL')
+    tnds_pass = os.getenv("TNDS_PASS")
+    bods_api_key = os.getenv("BODS_API_KEY")
     if not webhook_url:
         print("DISCORD_WEBHOOK_URL not set, skipping Discord notification")
         return
-
+    if not tnds_email:
+        print("TNDS_EMAIL not set")
+	return
+    if not tnds_pass:
+        print("TNDS_PASS not set")
+    if not bods_api_key:
+        print("BODS_API_KEY not set")
     payload = {
         "content": message,
         "username": "Timetable Updater"
@@ -80,8 +89,8 @@ def main():
         (["./manage.py", "import_bod_timetables", "stagecoach"], "Update Stagecoach"),
         (["./manage.py", "import_passenger"], "Update Passenger Sources"),
         (["./manage.py", "import_gtfs", "Realtime Transport Operators"], "Update IE Timetables"),
-        (["./manage.py", "import_bod_timetables", "ef9a655df2e980a59ee7145fec2551201ccc3569"], "Update BODS Timetables"),
-        (["./manage.py", "import_tnds", "ash@totl.sh", "R0sebr1dge25!"], "Import Traveline")
+        (["./manage.py", "import_bod_timetables", bods_api_key], "Update BODS Timetables"),
+        (["./manage.py", "import_tnds", tnds_email, tnds_pass], "Import Traveline")
     ]
 
     # Note: import_tnds and import_transxchange require data files and credentials
