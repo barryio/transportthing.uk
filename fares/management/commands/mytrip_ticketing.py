@@ -5,25 +5,20 @@ from busstops.models import DataSource, Operator, OperatorCode
 
 
 class Command(BaseCommand):
-    @staticmethod
-    def add_arguments(parser):
-        parser.add_argument("api_key", type=str, nargs="?")
+    help = "Fetch operator topup data from the MyTrip API (no API key required)"
 
-    def handle(self, api_key, **options):
+    def handle(self, **options):
+        # Create or get the data source
         source, _ = DataSource.objects.get_or_create(name="MyTrip")
-        if api_key:
-            source.settings = {"x-api-key": api_key}
-        print(source.settings)
 
         session = requests.Session()
-        session.headers.update({"x-api-key": source.settings["x-api-key"]})
 
-        response = session.get(
-            "https://mytrip.arcticapi.com/ticketing/topups"
-        )
+        # Call the new API endpoint (no headers or API key)
+        response = session.get("https://mytrip.arcticapi.com/ticketing/topups")
+        response.raise_for_status()  # make sure we catch HTTP errors early
 
-        print(response)
-        items = response.json()["_embedded"]["topup:category"]
+        data = response.json()
+        items = data.get("_embedded", {}).get("topup:category", [])
 
         for item in items:
             name = item["title"]
@@ -47,8 +42,9 @@ class Command(BaseCommand):
                 print("✔️ ", operator, name)
                 OperatorCode.objects.create(operator=operator, code=code, source=source)
 
+        # Clean up removed codes
         codes = [item["id"] for item in items]
         to_delete = OperatorCode.objects.filter(source=source).exclude(code__in=codes)
-        if to_delete:
-            print(f"{to_delete=}")
-            print(to_delete.delete())
+        if to_delete.exists():
+            print(f"Deleting {to_delete.count()} old codes...")
+            to_delete.delete()
