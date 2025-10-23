@@ -22,23 +22,32 @@ class Tickets:
 
 
 def get_source():
+    """
+    Get the MyTrip data source.
+    Ensure the DataSource URL is set to: https://mytrip.arcticapi.com/ticketing/topups
+    and has no API key settings.
+    """
     return get_object_or_404(DataSource, name="MyTrip")
 
 
 def get_response(source, code):
-    response = requests.get(
-        f"{source.url}/{code}",
-#        headers={"x-api-key": source.settings["x-api-key"]},
-        timeout=3,
-    )
+    """
+    Fetch data from the MyTrip API for a specific operator or ticket.
+    The new API does not require an API key, so no headers are sent.
+    """
+    url = f"{source.url.rstrip('/')}/{code}"
+    response = requests.get(url, timeout=5)
     if response.status_code == HTTPStatus.NOT_FOUND:
         raise Http404
-    assert response.ok
+    response.raise_for_status()
     return response.json()
 
 
 @cdn_cache_control(max_age=3600)
 def operator_tickets(request, slug):
+    """
+    Fetch and display the list of ticket categories for an operator.
+    """
     operator = get_object_or_404(Operator, slug=slug)
     source = get_source()
     code = get_object_or_404(OperatorCode, operator=operator, source=source)
@@ -47,20 +56,28 @@ def operator_tickets(request, slug):
     try:
         categories = response["_links"]["topup:category"]
     except KeyError:
-        raise Http404
-    groupings = response["_embedded"]["render"]["group_by"]
+        raise Http404("No topup categories found for this operator")
+
+    groupings = response.get("_embedded", {}).get("render", {}).get("group_by", [])
     for grouping in groupings:
         grouping["categories"] = [
-            category for category in categories if category["type"] == grouping["value"]
+            category for category in categories if category.get("type") == grouping.get("value")
         ]
 
-    context = {"breadcrumb": [operator], "operator": operator, "groupings": groupings}
+    context = {
+        "breadcrumb": [operator],
+        "operator": operator,
+        "groupings": groupings,
+    }
 
     return render(request, "operator_tickets.html", context)
 
 
 @cdn_cache_control(max_age=3600)
 def operator_ticket(request, slug, id):
+    """
+    Fetch and display a single ticket and its topups.
+    """
     operator = get_object_or_404(Operator, slug=slug)
     source = get_source()
     code = get_object_or_404(OperatorCode, operator=operator, source=source)
@@ -70,7 +87,7 @@ def operator_ticket(request, slug, id):
         response["_links"]["parent"]["id"] != code.code
         or "topup" not in response["_embedded"]
     ):
-        raise Http404
+        raise Http404("Ticket not found or missing topup data")
 
     context = {
         "breadcrumb": [operator, Tickets(operator)],
@@ -79,6 +96,7 @@ def operator_ticket(request, slug, id):
         "description": response["description"],
         "categories": response["_embedded"]["topup"],
     }
+
     for category in context["categories"]:
         category["price"] = f"{category['price'] / 100:.2f}"
         category["url"] = category["_links"]["public:view-product"]["href"]
