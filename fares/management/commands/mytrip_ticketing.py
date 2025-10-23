@@ -14,7 +14,7 @@ class Command(BaseCommand):
         session = requests.Session()
 
         # Call the new API endpoint (no headers or API key)
-        response = session.get("https://mytrip.arcticapi.com/")
+        response = session.get("https://mytrip.arcticapi.com/ticketing/topups")
         response.raise_for_status()  # make sure we catch HTTP errors early
 
         data = response.json()
