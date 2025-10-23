@@ -1,6 +1,5 @@
 from http import HTTPStatus
 import json
-
 import requests
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
@@ -26,14 +25,11 @@ def get_source():
 
 
 def get_response(source, code):
-    response = requests.get(
-        f"{source.url}/{code}",
-        headers={"x-api-key": source.settings["x-api-key"]},
-        timeout=3,
-    )
+    # Updated: no headers, no API key
+    response = requests.get(f"{source.url}/{code}", timeout=3)
     if response.status_code == HTTPStatus.NOT_FOUND:
         raise Http404
-    assert response.ok
+    response.raise_for_status()
     return response.json()
 
 
@@ -48,6 +44,7 @@ def operator_tickets(request, slug):
         categories = response["_links"]["topup:category"]
     except KeyError:
         raise Http404
+
     groupings = response["_embedded"]["render"]["group_by"]
     for grouping in groupings:
         grouping["categories"] = [
@@ -55,7 +52,6 @@ def operator_tickets(request, slug):
         ]
 
     context = {"breadcrumb": [operator], "operator": operator, "groupings": groupings}
-
     return render(request, "operator_tickets.html", context)
 
 
@@ -79,6 +75,7 @@ def operator_ticket(request, slug, id):
         "description": response["description"],
         "categories": response["_embedded"]["topup"],
     }
+
     for category in context["categories"]:
         category["price"] = f"{category['price'] / 100:.2f}"
         category["url"] = category["_links"]["public:view-product"]["href"]
@@ -106,6 +103,7 @@ def operator_ticket(request, slug, id):
             for category in context["categories"]
         ]
     )
+
     context["json_ld"] = mark_safe(
         f'<script type="application/ld+json">{json_ld}</script>'
     )
