@@ -19,7 +19,7 @@ class Command(BaseCommand):
         session.headers.update({"x-api-key": source.settings["x-api-key"]})
 
         response = session.get(
-            "https://mytrip-bustimes.api.passengercloud.com/ticketing/topups"
+            "https://mytrip.arcticapi.com/ticketing/topups"
         )
 
         print(response)
