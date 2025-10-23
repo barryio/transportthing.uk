@@ -28,7 +28,7 @@ def get_source():
 def get_response(source, code):
     response = requests.get(
         f"{source.url}/{code}",
-        headers={"x-api-key": source.settings["x-api-key"]},
+#        headers={"x-api-key": source.settings["x-api-key"]},
         timeout=3,
     )
     if response.status_code == HTTPStatus.NOT_FOUND:
