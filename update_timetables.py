@@ -15,23 +15,16 @@ import subprocess
 import sys
 import requests
 from datetime import datetime
+tnds_email = os.getenv('TNDS_EMAIL')
+tnds_pass = os.getenv("TNDS_PASS")
+bods_api_key = os.getenv("BODS_API_KEY")
 
 def send_discord_message(message: str):
     """Send a message to Discord webhook."""
     webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-    tnds_email = os.getenv('TNDS_EMAIL')
-    tnds_pass = os.getenv("TNDS_PASS")
-    bods_api_key = os.getenv("BODS_API_KEY")
     if not webhook_url:
         print("DISCORD_WEBHOOK_URL not set, skipping Discord notification")
         return
-    if not tnds_email:
-        print("TNDS_EMAIL not set")
-	return
-    if not tnds_pass:
-        print("TNDS_PASS not set")
-    if not bods_api_key:
-        print("BODS_API_KEY not set")
     payload = {
         "content": message,
         "username": "Timetable Updater"

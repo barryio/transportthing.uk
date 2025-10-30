@@ -49,6 +49,6 @@ services:
     mem_limit: 6144m
     command: [
       "redis-server",
-      "--maxmemory", "5gb",
+      "--maxmemory", "8gb",
       "--maxmemory-policy", "allkeys-lru"
     ]
