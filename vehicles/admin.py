@@ -727,6 +727,9 @@ class VehicleCodeAdmin(admin.ModelAdmin):
     list_display = ["id", "scheme", "code", "vehicle"]
     list_filter = ["scheme"]
 
+@admin.register(models.SiriSubscription)
+class SiriSubscriptionAdmin(admin.ModelAdmin):
+    readonly_fields = ["uuid", "sample"]
 
 admin.site.register(models.VehicleFeature)
-admin.site.register(models.SiriSubscription)
+

@@ -1209,7 +1209,7 @@ def siri_post(request, uuid):
 @csrf_exempt
 @require_POST
 def overland(request, uuid):
-    get_object_or_404(SiriSubscription, uuid=uuid)
+    subscription = get_object_or_404(SiriSubscription, uuid=uuid)
 
     data = json.loads(request.body)
 
@@ -1245,6 +1245,12 @@ def overland(request, uuid):
                 }
             },
         )
+
+    cache.set(
+        subscription.get_status_key().replace("_status", "_last_post"),
+        {"headers": request.headers, "body": request.body.decode()},
+        None,
+    )
 
     # https://github.com/aaronpk/Overland-iOS#api
     return JsonResponse({"result": "ok"})
